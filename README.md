@@ -71,7 +71,7 @@ Date, Description, Category, Cost, Currency, Person1, Person2
 
 Example:
 ```csv
-Date,Description,Category,Cost,Currency,Niloofar,Tristan Mann
+Date,Description,Category,Cost,Currency,John,Joe
 2024-01-15,Netflix,TV/Phone/Internet,15.99,EUR,7.99,8.00
 2024-01-16,Rewe Groceries,Groceries,45.50,EUR,22.75,22.75
 ```
