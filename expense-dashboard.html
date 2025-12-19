@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Splitwise Expense Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2.5em;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+            border: 2px dashed #667eea;
+        }
+
+        .upload-section input[type="file"] {
+            display: none;
+        }
+
+        .upload-label {
+            display: inline-block;
+            padding: 15px 40px;
+            background: #667eea;
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .upload-label:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        select, input {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        select[multiple] {
+            height: 120px;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .custom-multiselect {
+            position: relative;
+        }
+
+        .multiselect-header {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: border-color 0.3s;
+        }
+
+        .multiselect-header:hover {
+            border-color: #667eea;
+        }
+
+        .multiselect-header.open {
+            border-color: #667eea;
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+
+        .multiselect-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #667eea;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .multiselect-dropdown.open {
+            display: block;
+        }
+
+        .multiselect-option {
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+
+        .multiselect-option:hover {
+            background: #f8f9fa;
+        }
+
+        .multiselect-option input[type="checkbox"] {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        .multiselect-option label {
+            cursor: pointer;
+            margin: 0;
+            flex: 1;
+            font-weight: normal;
+        }
+
+        .multiselect-actions {
+            padding: 10px 15px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+            background: #f8f9fa;
+        }
+
+        .multiselect-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .select-all-btn {
+            background: #667eea;
+            color: white;
+        }
+
+        .select-all-btn:hover {
+            background: #5568d3;
+        }
+
+        .reset-btn-small {
+            background: #ff9800;
+            color: white;
+        }
+
+        .reset-btn-small:hover {
+            background: #f57c00;
+        }
+
+        .multiselect-arrow {
+            transition: transform 0.3s;
+        }
+
+        .multiselect-arrow.open {
+            transform: rotate(180deg);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 25px;
+            border-radius: 15px;
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .category-tag {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .remove-btn {
+            background: #ff5252;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .remove-btn:hover {
+            background: #ff1744;
+        }
+
+        .removed-row {
+            opacity: 0.5;
+            background: #ffebee !important;
+        }
+
+        .restore-btn {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .chart-container {
+            margin-top: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .bar {
+            height: 45px;
+            margin: 8px 0;
+            border-radius: 5px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            align-items: center;
+            gap: 15px;
+            padding: 0 15px;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s;
+            min-width: 250px;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .bar-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 14px;
+            min-width: 0;
+        }
+
+        .bar-value {
+            flex-shrink: 0;
+            font-size: 15px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .bar:hover {
+            transform: translateX(5px);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none; /* Changed from flex to none by default */
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal-overlay:not(.hidden) {
+            display: flex; /* Only show as flex when NOT hidden */
+        }
+
+        .modal {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .modal h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .modal-content {
+            margin: 20px 0;
+        }
+
+        .recategorization-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .recategorization-item .description {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .recategorization-item .category-change {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .old-category {
+            color: #ff5252;
+            text-decoration: line-through;
+        }
+
+        .new-category {
+            color: #4caf50;
+            font-weight: 600;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .modal-btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .modal-btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .modal-btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .modal-btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .api-key-section {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .api-key-section h3 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .api-key-section input {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .api-key-section a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .api-key-section a:hover {
+            text-decoration: underline;
+        }
+
+        .advisor-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 40px;
+            color: white;
+            margin-top: 30px;
+        }
+
+        .advisor-section h2 {
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .advisor-content {
+            background: white;
+            color: #333;
+            padding: 30px;
+            border-radius: 15px;
+            line-height: 1.8;
+        }
+
+        .advisor-content h3 {
+            color: #667eea;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .advisor-content h3:first-child {
+            margin-top: 0;
+        }
+
+        .advisor-content p {
+            margin-bottom: 15px;
+        }
+
+        .advisor-content ul, .advisor-content ol {
+            margin-left: 25px;
+            margin-bottom: 15px;
+            margin-top: 10px;
+        }
+
+        .advisor-content li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        .advisor-content ul li {
+            list-style-type: disc;
+        }
+
+        .advisor-content ol li {
+            list-style-type: decimal;
+        }
+
+        .advisor-content strong {
+            color: #667eea;
+        }
+
+        .insight-card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+
+        .insight-card.warning {
+            border-left-color: #ff9800;
+            background: #fff8e1;
+        }
+
+        .insight-card.success {
+            border-left-color: #4caf50;
+            background: #e8f5e9;
+        }
+
+        .get-advice-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: block;
+            margin: 20px auto;
+        }
+
+        .get-advice-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+
+        .get-advice-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .reset-btn {
+            background: #ff9800;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+
+        .reset-btn:hover {
+            background: #f57c00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 Splitwise Expense Dashboard</h1>
+
+        <div class="upload-section">
+            <input type="file" id="csvFile" accept=".csv">
+            <label for="csvFile" class="upload-label">📁 Upload CSV File</label>
+            <p style="margin-top: 15px; color: #666;">Upload your Splitwise expense data</p>
+        </div>
+
+        <div id="apiKeySection" class="hidden">
+            <div class="api-key-section">
+                <h3>🔑 Claude AI API Key (Optional)</h3>
+                <p style="color: #856404; font-size: 14px;">
+                    We detected expenses with "Other" categories. Enter your Claude API key to improve categorization automatically. 
+                    Get one from <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a>.
+                </p>
+                <input type="password" id="apiKey" placeholder="sk-ant-...">
+                <div style="margin-top: 15px; display: flex; gap: 10px;">
+                    <button class="modal-btn modal-btn-primary" onclick="proceedWithRecategorization()">Recategorize with AI</button>
+                    <button class="modal-btn modal-btn-secondary" onclick="skipRecategorization()">Skip & Continue</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="recategorizationModal" class="modal-overlay hidden">
+            <div class="modal">
+                <h2>🤖 AI Category Suggestions</h2>
+                <div id="modalContent" class="modal-content"></div>
+                <div class="modal-buttons">
+                    <button class="modal-btn modal-btn-secondary" onclick="rejectRecategorization()">Keep Original</button>
+                    <button class="modal-btn modal-btn-primary" onclick="acceptRecategorization()">Apply Changes</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="dashboard" class="hidden">
+            <div class="controls">
+                <div class="control-group">
+                    <label for="yearFilter">Filter by Year:</label>
+                    <select id="yearFilter">
+                        <option value="all">All Years</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="groupBy">Group By:</label>
+                    <select id="groupBy">
+                        <option value="month">Month</option>
+                        <option value="quarter">Quarter</option>
+                        <option value="year">Year</option>
+                        <option value="all">All Time</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="categoryFilter">Filter by Category:</label>
+                    <div class="custom-multiselect" id="categoryFilterContainer">
+                        <div class="multiselect-header" id="categoryHeader">
+                            <span id="categorySelectedText">All Categories</span>
+                            <span class="multiselect-arrow">▼</span>
+                        </div>
+                        <div class="multiselect-dropdown" id="categoryDropdown">
+                            <div class="multiselect-actions">
+                                <button class="multiselect-btn select-all-btn" onclick="selectAllCategories()">Select All</button>
+                                <button class="multiselect-btn reset-btn-small" onclick="resetCategoryFilter()">Reset</button>
+                            </div>
+                            <div id="categoryOptions"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label for="searchDescription">Search Description:</label>
+                    <input type="text" id="searchDescription" placeholder="Type to search...">
+                </div>
+                <div class="control-group">
+                    <label for="minAmount">Min Amount:</label>
+                    <input type="number" id="minAmount" placeholder="0" step="0.01">
+                </div>
+                <div class="control-group">
+                    <label for="maxAmount">Max Amount:</label>
+                    <input type="number" id="maxAmount" placeholder="No limit" step="0.01">
+                </div>
+            </div>
+
+            <div class="stats-grid" id="statsGrid"></div>
+
+            <div class="section">
+                <h2>📊 Category Breakdown</h2>
+                <div class="chart-container" id="categoryChart"></div>
+            </div>
+
+            <div class="section">
+                <h2>📈 Year-over-Year Comparison by Category</h2>
+                <div class="control-group" style="max-width: 300px; margin-bottom: 20px;">
+                    <label for="yoyCategory">Select Category:</label>
+                    <select id="yoyCategory">
+                        <option value="">Select a category...</option>
+                    </select>
+                </div>
+                <div class="chart-container" id="yoyChart"></div>
+            </div>
+
+            <div class="section">
+                <h2>🔝 Top 10 Biggest Expenses</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Cost</th>
+                            <th>Currency</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topExpensesTable"></tbody>
+                </table>
+            </div>
+
+            <div class="section">
+                <h2>💰 Total Paid by Each Person</h2>
+                <p style="color: #666; margin-bottom: 15px;">Shows the total amount each person actually paid (based on the Cost column)</p>
+                <div id="personPaidExpenses"></div>
+            </div>
+
+            <div class="section">
+                <h2>⚖️ Who Owes Whom</h2>
+                <p style="color: #666; margin-bottom: 15px;">Shows who owes money at the end of each period</p>
+                <div id="personShareExpenses"></div>
+                <button class="reset-btn" onclick="resetRemovedItems()">🔄 Reset Removed Items</button>
+            </div>
+
+            <div class="section" id="paymentsSection" style="display: none;">
+                <h2>💸 Payment Transfers Between Partners</h2>
+                <p style="color: #666; margin-bottom: 15px;">These are internal transfers between partners, not expenses</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Currency</th>
+                        </tr>
+                    </thead>
+                    <tbody id="paymentsTable"></tbody>
+                </table>
+                <div id="paymentsTotal" style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 10px;"></div>
+            </div>
+
+            <div class="advisor-section" id="advisorSection">
+                <h2>🤖 AI Financial Advisor</h2>
+                <p style="margin-bottom: 20px;">Get personalized insights and recommendations based on your spending patterns</p>
+                <button class="get-advice-btn" id="getAdviceBtn" onclick="getFinancialAdvice()">
+                    💡 Get Financial Insights
+                </button>
+                <div id="advisorContent" class="advisor-content hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let expenses = [];
+        let payments = [];
+        let removedIndices = new Set();
+        let personNames = [];
+        let selectedCategories = new Set(['all']);
+        let suggestedRecategorizations = [];
+        let allCategories = [];
+
+        document.getElementById('csvFile').addEventListener('change', handleFileUpload);
+        document.getElementById('groupBy').addEventListener('change', updateDashboard);
+        document.getElementById('yearFilter').addEventListener('change', updateDashboard);
+        document.getElementById('searchDescription').addEventListener('input', updateDashboard);
+        document.getElementById('minAmount').addEventListener('input', updateDashboard);
+        document.getElementById('maxAmount').addEventListener('input', updateDashboard);
+        document.getElementById('yoyCategory').addEventListener('change', updateYoYChart);
+
+        // Toggle dropdown
+        document.getElementById('categoryHeader').addEventListener('click', function(e) {
+            e.stopPropagation();
+            const dropdown = document.getElementById('categoryDropdown');
+            const arrow = document.querySelector('.multiselect-arrow');
+            const header = document.getElementById('categoryHeader');
+            
+            dropdown.classList.toggle('open');
+            arrow.classList.toggle('open');
+            header.classList.toggle('open');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const container = document.getElementById('categoryFilterContainer');
+            if (!container.contains(e.target)) {
+                document.getElementById('categoryDropdown').classList.remove('open');
+                document.querySelector('.multiselect-arrow').classList.remove('open');
+                document.getElementById('categoryHeader').classList.remove('open');
+            }
+        });
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                parseCSV(text);
+                
+                // Check if there are "Other" categories
+                const hasOtherCategories = expenses.some(e => 
+                    e.category.toLowerCase().includes('other')
+                );
+
+                if (hasOtherCategories) {
+                    // Show API key section
+                    document.getElementById('apiKeySection').classList.remove('hidden');
+                } else {
+                    // No "Other" categories - show dashboard directly
+                    initializeDashboard();
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            
+            // Get person names (columns after Currency)
+            const currencyIndex = headers.indexOf('Currency');
+            personNames = headers.slice(currencyIndex + 1);
+
+            expenses = [];
+            payments = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseCSVLine(lines[i]);
+                if (values.length < 5) continue;
+
+                const item = {
+                    date: values[0],
+                    description: values[1],
+                    category: values[2],
+                    cost: parseFloat(values[3]) || 0,
+                    currency: values[4],
+                    originalCategory: values[2] // Store original for comparison
+                };
+
+                // Add person amounts
+                personNames.forEach((name, idx) => {
+                    item[name] = parseFloat(values[currencyIndex + 1 + idx]) || 0;
+                });
+
+                // Separate payments from expenses
+                if (item.category.toLowerCase() === 'payment') {
+                    payments.push(item);
+                } else {
+                    expenses.push(item);
+                }
+            }
+
+            // Store all unique categories (excluding Payment)
+            allCategories = [...new Set(expenses.map(e => e.category))].sort();
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            return result;
+        }
+
+        function getFilteredExpenses() {
+            const categoryFilter = selectedCategories.has('all') || selectedCategories.size === 0 ? 'all' : Array.from(selectedCategories);
+            
+            const yearFilter = document.getElementById('yearFilter').value;
+            const searchDescription = document.getElementById('searchDescription').value.toLowerCase();
+            const minAmount = parseFloat(document.getElementById('minAmount').value) || 0;
+            const maxAmount = parseFloat(document.getElementById('maxAmount').value) || Infinity;
+
+            return expenses.filter((expense, idx) => {
+                if (removedIndices.has(idx)) return false;
+                if (categoryFilter !== 'all' && !categoryFilter.includes(expense.category)) return false;
+                if (yearFilter !== 'all' && new Date(expense.date).getFullYear() !== parseInt(yearFilter)) return false;
+                if (searchDescription && !expense.description.toLowerCase().includes(searchDescription)) return false;
+                if (expense.cost < minAmount || expense.cost > maxAmount) return false;
+                return true;
+            });
+        }
+
+        function updateDashboard() {
+            const filtered = getFilteredExpenses();
+            updateStats(filtered);
+            updateCategoryChart(filtered);
+            updateTopExpenses(filtered);
+            updatePersonPaidExpenses(filtered);
+            updatePersonShareExpenses(filtered);
+        }
+
+        function updateStats(filtered) {
+            const total = filtered.reduce((sum, e) => sum + e.cost, 0);
+            const average = total / (filtered.length || 1);
+            const categories = new Set(filtered.map(e => e.category)).size;
+
+            const statsHtml = `
+                <div class="stat-card">
+                    <h3>Total Expenses</h3>
+                    <div class="value">${total.toFixed(2)}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Number of Transactions</h3>
+                    <div class="value">${filtered.length}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Average Transaction</h3>
+                    <div class="value">${average.toFixed(2)}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Categories</h3>
+                    <div class="value">${categories}</div>
+                </div>
+            `;
+            document.getElementById('statsGrid').innerHTML = statsHtml;
+        }
+
+        function updateCategoryChart(filtered) {
+            const categoryTotals = {};
+            filtered.forEach(expense => {
+                categoryTotals[expense.category] = (categoryTotals[expense.category] || 0) + expense.cost;
+            });
+
+            const sorted = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+            const maxAmount = Math.max(...sorted.map(([_, amount]) => amount));
+            const minAmount = Math.min(...sorted.map(([_, amount]) => amount));
+
+            const chartHtml = sorted.map(([category, amount]) => {
+                const percentage = Math.max((amount / maxAmount) * 100, 20); // Minimum 20% width for readability
+                
+                // Calculate color intensity: higher cost = more opaque/darker
+                const intensity = minAmount === maxAmount ? 1 : 
+                    0.5 + (0.5 * (amount - minAmount) / (maxAmount - minAmount));
+                
+                return `
+                    <div class="bar" style="width: ${percentage}%; background: linear-gradient(90deg, 
+                        rgba(102, 126, 234, ${intensity}) 0%, 
+                        rgba(118, 75, 162, ${intensity}) 100%);">
+                        <span class="bar-label" title="${category}">${category}</span>
+                        <span class="bar-value">${amount.toFixed(2)}</span>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('categoryChart').innerHTML = chartHtml || '<p style="color: #999;">No data to display</p>';
+        }
+
+        function updateTopExpenses(filtered) {
+            const sorted = [...filtered]
+                .map((expense, originalIdx) => ({ ...expense, originalIdx: expenses.indexOf(expense) }))
+                .sort((a, b) => b.cost - a.cost)
+                .slice(0, 10);
+
+            const tableHtml = sorted.map(expense => `
+                <tr>
+                    <td>${expense.date}</td>
+                    <td>${expense.description}</td>
+                    <td><span class="category-tag">${expense.category}</span></td>
+                    <td><strong>${expense.cost.toFixed(2)}</strong></td>
+                    <td>${expense.currency}</td>
+                    <td>
+                        <button class="remove-btn" onclick="removeExpense(${expense.originalIdx})">
+                            Remove
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            document.getElementById('topExpensesTable').innerHTML = tableHtml;
+        }
+
+        function updatePersonPaidExpenses(filtered) {
+            const groupBy = document.getElementById('groupBy').value;
+            const grouped = {};
+
+            // Calculate who paid what based on the Cost column
+            // We need to determine who paid based on the transaction structure
+            filtered.forEach(expense => {
+                const key = getGroupKey(expense.date, groupBy);
+                if (!grouped[key]) {
+                    grouped[key] = {};
+                    personNames.forEach(name => grouped[key][name] = 0);
+                }
+                
+                // If a person has a positive value in their column, they paid the full cost
+                // If negative, the other person paid
+                personNames.forEach(name => {
+                    if (expense[name] >= 0) {
+                        // This person paid for this expense
+                        grouped[key][name] += expense.cost;
+                    }
+                });
+            });
+
+            const sortedKeys = Object.keys(grouped).sort();
+            
+            const html = sortedKeys.map(key => {
+                const personTotals = personNames.map(name => 
+                    `<tr>
+                        <td>${name}</td>
+                        <td><strong>${grouped[key][name].toFixed(2)}</strong></td>
+                    </tr>`
+                ).join('');
+
+                return `
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="color: #667eea; margin-bottom: 15px;">${key}</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Person</th>
+                                    <th>Total Paid</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${personTotals}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('personPaidExpenses').innerHTML = html || '<p style="color: #999;">No data to display</p>';
+        }
+
+        function updatePersonShareExpenses(filtered) {
+            const groupBy = document.getElementById('groupBy').value;
+            const grouped = {};
+
+            // Calculate each person's share (their portion of expenses)
+            filtered.forEach(expense => {
+                const key = getGroupKey(expense.date, groupBy);
+                if (!grouped[key]) {
+                    grouped[key] = {};
+                    personNames.forEach(name => grouped[key][name] = 0);
+                }
+                
+                // Add each person's share (can be negative if they owe)
+                personNames.forEach(name => {
+                    grouped[key][name] += expense[name];
+                });
+            });
+
+            const sortedKeys = Object.keys(grouped).sort();
+            
+            const html = sortedKeys.map(key => {
+                // Find who owes money (negative balance)
+                const balances = personNames.map(name => ({
+                    name: name,
+                    amount: grouped[key][name]
+                })).filter(person => person.amount < 0);
+
+                if (balances.length === 0) {
+                    return `
+                        <div style="margin-bottom: 30px;">
+                            <h3 style="color: #667eea; margin-bottom: 15px;">${key}</h3>
+                            <div style="background: #e8f5e9; padding: 20px; border-radius: 10px; text-align: center;">
+                                <span style="color: #4caf50; font-size: 18px; font-weight: 600;">✅ All settled up!</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                const debtRows = balances.map(person => {
+                    const owedTo = personNames.find(name => name !== person.name);
+                    return `<tr>
+                        <td style="font-size: 16px;"><strong>${person.name}</strong></td>
+                        <td style="font-size: 16px;">owes</td>
+                        <td style="font-size: 16px;"><strong>${owedTo}</strong></td>
+                        <td><strong style="color: #ff5252; font-size: 18px;">${Math.abs(person.amount).toFixed(2)}</strong></td>
+                    </tr>`;
+                }).join('');
+
+                return `
+                    <div style="margin-bottom: 30px;">
+                        <h3 style="color: #667eea; margin-bottom: 15px;">${key}</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Person</th>
+                                    <th></th>
+                                    <th>To</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${debtRows}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('personShareExpenses').innerHTML = html || '<p style="color: #999;">No data to display</p>';
+        }
+
+        function getGroupKey(dateStr, groupBy) {
+            const date = new Date(dateStr);
+            const year = date.getFullYear();
+            const month = date.getMonth();
+
+            switch (groupBy) {
+                case 'month':
+                    return `${year}-${String(month + 1).padStart(2, '0')}`;
+                case 'quarter':
+                    const quarter = Math.floor(month / 3) + 1;
+                    return `${year} Q${quarter}`;
+                case 'year':
+                    return `${year}`;
+                case 'all':
+                    return 'All Time';
+                default:
+                    return dateStr;
+            }
+        }
+
+        function removeExpense(index) {
+            removedIndices.add(index);
+            updateDashboard();
+        }
+
+        function resetRemovedItems() {
+            removedIndices.clear();
+            updateDashboard();
+        }
+
+        function toggleCategory(category) {
+            event.stopPropagation();
+            
+            if (selectedCategories.has('all')) {
+                selectedCategories.clear();
+            }
+            
+            if (selectedCategories.has(category)) {
+                selectedCategories.delete(category);
+            } else {
+                selectedCategories.add(category);
+            }
+            
+            // If nothing selected, default to all
+            if (selectedCategories.size === 0) {
+                selectedCategories.add('all');
+            }
+            
+            updateCategoryCheckboxes();
+            updateCategoryHeaderText();
+            updateDashboard();
+        }
+
+        function selectAllCategories() {
+            event.stopPropagation();
+            selectedCategories.clear();
+            
+            // Add all actual categories (not 'all')
+            const categories = [...new Set(expenses.map(e => e.category))];
+            categories.forEach(cat => selectedCategories.add(cat));
+            
+            updateCategoryCheckboxes();
+            updateCategoryHeaderText();
+            updateDashboard();
+        }
+
+        function resetCategoryFilter() {
+            event.stopPropagation();
+            selectedCategories.clear();
+            selectedCategories.add('all');
+            
+            updateCategoryCheckboxes();
+            updateCategoryHeaderText();
+            updateDashboard();
+        }
+
+        function updateCategoryCheckboxes() {
+            const categories = [...new Set(expenses.map(e => e.category))];
+            const allSelected = selectedCategories.has('all') || selectedCategories.size === categories.length;
+            
+            categories.forEach(cat => {
+                const checkbox = document.getElementById(`cat_${cat.replace(/[^a-zA-Z0-9]/g, '_')}`);
+                if (checkbox) {
+                    checkbox.checked = allSelected || selectedCategories.has(cat);
+                }
+            });
+        }
+
+        function updateCategoryHeaderText() {
+            const textElement = document.getElementById('categorySelectedText');
+            const totalCategories = new Set(expenses.map(e => e.category)).size;
+            
+            if (selectedCategories.has('all') || selectedCategories.size === totalCategories) {
+                textElement.textContent = 'All Categories';
+            } else if (selectedCategories.size === 0) {
+                textElement.textContent = 'Select categories...';
+            } else if (selectedCategories.size === 1) {
+                textElement.textContent = Array.from(selectedCategories)[0];
+            } else {
+                textElement.textContent = `${selectedCategories.size} categories selected`;
+            }
+        }
+
+        function initializeDashboard() {
+            // Populate year filter
+            const years = [...new Set(expenses.map(e => new Date(e.date).getFullYear()))].sort();
+            const yearFilter = document.getElementById('yearFilter');
+            yearFilter.innerHTML = '<option value="all">All Years</option>';
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearFilter.appendChild(option);
+            });
+
+            // Populate category checkboxes
+            allCategories = [...new Set(expenses.map(e => e.category))].sort();
+            const categoryOptions = document.getElementById('categoryOptions');
+            categoryOptions.innerHTML = allCategories.map(cat => `
+                <div class="multiselect-option" onclick="toggleCategory('${cat.replace(/'/g, "\\'")}')">
+                    <input type="checkbox" id="cat_${cat.replace(/[^a-zA-Z0-9]/g, '_')}" 
+                           ${selectedCategories.has(cat) || selectedCategories.has('all') ? 'checked' : ''}>
+                    <label>${cat}</label>
+                </div>
+            `).join('');
+
+            // Populate YoY category dropdown
+            const yoyCategory = document.getElementById('yoyCategory');
+            yoyCategory.innerHTML = '<option value="">Select a category...</option>';
+            allCategories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                yoyCategory.appendChild(option);
+            });
+
+            updateCategoryHeaderText();
+            
+            // Show payments section if there are payments
+            if (payments.length > 0) {
+                displayPayments();
+            }
+            
+            document.getElementById('dashboard').classList.remove('hidden');
+            updateDashboard();
+        }
+
+        function displayPayments() {
+            const paymentsSection = document.getElementById('paymentsSection');
+            const paymentsTable = document.getElementById('paymentsTable');
+            const paymentsTotal = document.getElementById('paymentsTotal');
+            
+            paymentsSection.style.display = 'block';
+            
+            // Sort payments by date (newest first)
+            const sortedPayments = [...payments].sort((a, b) => 
+                new Date(b.date) - new Date(a.date)
+            );
+            
+            // Create table rows
+            const tableHtml = sortedPayments.map(payment => `
+                <tr>
+                    <td>${payment.date}</td>
+                    <td>${payment.description}</td>
+                    <td><strong>${payment.cost.toFixed(2)}</strong></td>
+                    <td>${payment.currency}</td>
+                </tr>
+            `).join('');
+            
+            paymentsTable.innerHTML = tableHtml;
+            
+            // Calculate total
+            const total = payments.reduce((sum, p) => sum + p.cost, 0);
+            paymentsTotal.innerHTML = `
+                <strong>Total Internal Transfers: €${total.toFixed(2)}</strong>
+                <p style="color: #666; font-size: 14px; margin-top: 5px;">
+                    ${payments.length} transfer${payments.length !== 1 ? 's' : ''} between partners (excluded from expense analysis)
+                </p>
+            `;
+        }
+
+        async function recategorizeExpenses(apiKey) {
+            const modalContent = document.getElementById('modalContent');
+            const modal = document.getElementById('recategorizationModal');
+            
+            try {
+                // Get expenses with "Other" in category
+                const otherExpenses = expenses.filter(e => 
+                    e.category.toLowerCase().includes('other')
+                );
+
+                if (otherExpenses.length === 0) {
+                    initializeDashboard();
+                    return;
+                }
+
+                // Show loading spinner ONLY after we know we need to process
+                modalContent.innerHTML = `
+                    <div class="loading-spinner">
+                        <div class="spinner"></div>
+                        <p>AI is analyzing your expenses...</p>
+                    </div>
+                `;
+                modal.classList.remove('hidden');
+
+                // Get existing non-"Other" categories for context
+                const existingCategories = allCategories.filter(cat => 
+                    !cat.toLowerCase().includes('other')
+                );
+
+                // Prepare the prompt for Claude
+                const prompt = `You are an expert expense categorization assistant. Analyze these expense descriptions and assign them to the most appropriate categories.
+
+EXISTING CATEGORIES IN THE DATA:
+${existingCategories.join(', ')}
+
+CATEGORIZATION RULES:
+1. **Cash Withdrawals & ATM** (cash, geldautomat, ATM, withdrawal) → "Cash" (create if doesn't exist, NOT TV/Phone/Internet or General)
+2. **Streaming Services** (Netflix, Disney+, Spotify, etc.) → "TV/Phone/Internet"
+3. **Home Decor & Furnishings** (candles, decorations, furniture, Räucherkerze) → "Furniture" or "Home" (if it exists)
+4. **Credit Card Refunds/Payments** (Amex, Visa refunds) → "Cash"
+5. **Tourist Attractions & Experiences** (Kehlsteinhaus, museums, sauna, spa) → "Tickets" or "Entertainment"
+6. **Co-Working Spaces & Office Rentals** → "Services" or "Office" (not Household Supplies)
+7. **Groceries & Supermarkets** (Rewe, Edeka, Aldi, Lidl, Flink) → "Groceries" or "Food and drink"
+8. **Restaurants & Cafes** → "Food and drink" or "Dining"
+9. **Transportation** (Uber, taxi, gas) → "Transportation" or "Travel"
+10. **Utilities** (electricity, water, internet bills) → "Utilities" or "Bills"
+
+IMPORTANT GUIDELINES:
+- Cash/ATM = "Cash" category ALWAYS (never TV/Phone/Internet or General)
+- Be specific: Don't use "General" unless truly unclear
+- Match existing categories when possible
+- Create new specific categories only when necessary (e.g., "Cash", "Services", "Office")
+- Consider the context: Sauna at a spa = Entertainment/Tickets, not Health
+- Streaming = TV/Phone/Internet (even if it's entertainment)
+- Home items (decorations, candles, furnishings) = Furniture/Home, NOT Movies
+- Co-working spaces = Services/Office, NOT Household Supplies
+
+EXPENSES TO RECATEGORIZE:
+${otherExpenses.map((e, idx) => `${idx}. "${e.description}" | Current: "${e.category}" | Cost: ${e.cost}`).join('\n')}
+
+Respond ONLY with a JSON array. No explanations, no markdown:
+[
+  {"index": 0, "newCategory": "Category Name"},
+  {"index": 1, "newCategory": "Category Name"}
+]`;
+
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 2000,
+                        messages: [{
+                            role: 'user',
+                            content: prompt
+                        }]
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const textContent = data.content[0].text;
+                
+                // Parse the JSON response
+                const jsonMatch = textContent.match(/\[[\s\S]*\]/);
+                if (!jsonMatch) {
+                    throw new Error('Invalid response format from API');
+                }
+                
+                const suggestions = JSON.parse(jsonMatch[0]);
+
+                // Create recategorization suggestions
+                suggestedRecategorizations = otherExpenses.map((expense, idx) => {
+                    const suggestion = suggestions.find(s => s.index === idx);
+                    return {
+                        expense: expense,
+                        oldCategory: expense.category,
+                        newCategory: suggestion ? suggestion.newCategory : expense.category
+                    };
+                }).filter(s => s.oldCategory !== s.newCategory);
+
+                if (suggestedRecategorizations.length === 0) {
+                    // No changes suggested - hide modal and proceed
+                    modal.classList.add('hidden');
+                    initializeDashboard();
+                    return;
+                }
+
+                // Show suggestions
+                showRecategorizationSuggestions();
+
+            } catch (error) {
+                console.error('Recategorization error:', error);
+                modal.classList.remove('hidden');
+                modalContent.innerHTML = `
+                    <div style="color: #ff5252; text-align: center; padding: 20px;">
+                        <p><strong>⚠️ Error during recategorization</strong></p>
+                        <p style="font-size: 14px; margin-top: 10px;">${error.message}</p>
+                        <p style="font-size: 14px; margin-top: 10px;">Proceeding with original categories...</p>
+                    </div>
+                `;
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    initializeDashboard();
+                }, 3000);
+            }
+        }
+
+        function showRecategorizationSuggestions() {
+            const modalContent = document.getElementById('modalContent');
+            
+            const affectedCount = suggestedRecategorizations.length;
+            const totalOtherCount = expenses.filter(e => 
+                e.category.toLowerCase().includes('other')
+            ).length;
+            
+            const summary = `
+                <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center;">
+                    <div style="font-size: 24px; font-weight: bold; color: #667eea; margin-bottom: 10px;">
+                        ${affectedCount} ${affectedCount === 1 ? 'expense' : 'expenses'} to be updated
+                    </div>
+                    <div style="color: #666; font-size: 14px;">
+                        Out of ${totalOtherCount} expenses with "Other" categories
+                    </div>
+                </div>
+            `;
+
+            const items = suggestedRecategorizations.map(item => `
+                <div class="recategorization-item">
+                    <div class="description">"${item.expense.description}"</div>
+                    <div class="category-change">
+                        <span class="old-category">${item.oldCategory}</span>
+                        →
+                        <span class="new-category">${item.newCategory}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            modalContent.innerHTML = summary + items;
+        }
+
+        function acceptRecategorization() {
+            // Apply the suggested recategorizations
+            suggestedRecategorizations.forEach(item => {
+                item.expense.category = item.newCategory;
+            });
+
+            document.getElementById('recategorizationModal').classList.add('hidden');
+            initializeDashboard();
+        }
+
+        function rejectRecategorization() {
+            // Keep original categories
+            document.getElementById('recategorizationModal').classList.add('hidden');
+            initializeDashboard();
+        }
+
+        function proceedWithRecategorization() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            
+            if (!apiKey) {
+                alert('Please enter your Claude API key');
+                return;
+            }
+
+            // Hide API key section
+            document.getElementById('apiKeySection').classList.add('hidden');
+            
+            // Start recategorization
+            recategorizeExpenses(apiKey);
+        }
+
+        function skipRecategorization() {
+            // Hide API key section and proceed with original categories
+            document.getElementById('apiKeySection').classList.add('hidden');
+            initializeDashboard();
+        }
+
+        async function getFinancialAdvice() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const advisorContent = document.getElementById('advisorContent');
+            const getAdviceBtn = document.getElementById('getAdviceBtn');
+
+            if (!apiKey) {
+                alert('Please enter your Claude API key in the upload section to use the AI Financial Advisor');
+                return;
+            }
+
+            // Disable button and show loading
+            getAdviceBtn.disabled = true;
+            getAdviceBtn.textContent = '🔄 Analyzing your finances...';
+            advisorContent.classList.remove('hidden');
+            advisorContent.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>AI is analyzing your spending patterns...</p>
+                </div>
+            `;
+
+            try {
+                // Get year filter
+                const selectedYear = document.getElementById('yearFilter').value;
+                const yearFilter = selectedYear !== 'all' ? parseInt(selectedYear) : null;
+
+                // Filter expenses based on year filter
+                const filteredExpenses = expenses.filter((expense, idx) => {
+                    if (removedIndices.has(idx)) return false;
+                    if (yearFilter) {
+                        return new Date(expense.date).getFullYear() === yearFilter;
+                    }
+                    return true;
+                });
+
+                // Calculate yearly totals (respecting filter)
+                const yearlyTotals = {};
+                const yearlyByCategory = {};
+                filteredExpenses.forEach(expense => {
+                    const year = new Date(expense.date).getFullYear();
+                    yearlyTotals[year] = (yearlyTotals[year] || 0) + expense.cost;
+                    
+                    if (!yearlyByCategory[year]) yearlyByCategory[year] = {};
+                    yearlyByCategory[year][expense.category] = 
+                        (yearlyByCategory[year][expense.category] || 0) + expense.cost;
+                });
+
+                // Calculate category totals
+                const categoryTotals = {};
+                filteredExpenses.forEach(expense => {
+                    categoryTotals[expense.category] = (categoryTotals[expense.category] || 0) + expense.cost;
+                });
+
+                // Get top categories
+                const topCategories = Object.entries(categoryTotals)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5);
+
+                // Calculate monthly averages
+                const monthlyData = {};
+                filteredExpenses.forEach(expense => {
+                    const date = new Date(expense.date);
+                    const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+                    monthlyData[key] = (monthlyData[key] || 0) + expense.cost;
+                });
+
+                const avgMonthly = Object.values(monthlyData).length > 0 
+                    ? Object.values(monthlyData).reduce((a, b) => a + b, 0) / Object.keys(monthlyData).length 
+                    : 0;
+
+                // Analyze frequency patterns for specific merchants
+                const merchantFrequency = {};
+                const merchantCosts = {};
+                filteredExpenses.forEach(expense => {
+                    const desc = expense.description.toLowerCase();
+                    
+                    // Track frequency for key merchants
+                    const merchants = ['flink', 'rewe', 'edeka', 'aldi', 'lidl', 'uber', 'lieferando', 'wolt'];
+                    merchants.forEach(merchant => {
+                        if (desc.includes(merchant)) {
+                            merchantFrequency[merchant] = (merchantFrequency[merchant] || 0) + 1;
+                            merchantCosts[merchant] = (merchantCosts[merchant] || 0) + expense.cost;
+                        }
+                    });
+                });
+
+                // Calculate YoY changes for categories
+                const yoyChanges = {};
+                Object.keys(yearlyByCategory).forEach(year => {
+                    const prevYear = (parseInt(year) - 1).toString();
+                    if (yearlyByCategory[prevYear]) {
+                        Object.keys(yearlyByCategory[year]).forEach(cat => {
+                            if (yearlyByCategory[prevYear][cat]) {
+                                const change = ((yearlyByCategory[year][cat] - yearlyByCategory[prevYear][cat]) / yearlyByCategory[prevYear][cat] * 100);
+                                if (!yoyChanges[cat] || Math.abs(change) > Math.abs(yoyChanges[cat])) {
+                                    yoyChanges[cat] = {
+                                        change: change,
+                                        years: `${prevYear}-${year}`,
+                                        prevAmount: yearlyByCategory[prevYear][cat],
+                                        currentAmount: yearlyByCategory[year][cat]
+                                    };
+                                }
+                            }
+                        });
+                    }
+                });
+
+                // Prepare the analysis prompt
+                const prompt = `You are a professional financial advisor analyzing expense data for a couple. Provide insightful, actionable advice.
+
+IMPORTANT: "Payment" category transactions have been excluded - these are internal transfers between partners, not actual expenses.
+
+${yearFilter ? `ANALYZING YEAR: ${yearFilter} (user has filtered to this specific year - focus insights on this year)` : 'ANALYZING: All available years'}
+
+EXPENSE DATA SUMMARY:
+- Time period analyzed: ${Object.keys(yearlyTotals).sort().join(', ')}
+- Total expenses tracked: ${filteredExpenses.length} transactions (excluding internal payments)
+- Average monthly spending: €${avgMonthly.toFixed(2)}
+
+YEARLY SPENDING:
+${Object.entries(yearlyTotals).sort().map(([year, total]) => `${year}: €${total.toFixed(2)}`).join('\n')}
+
+TOP 5 SPENDING CATEGORIES ${yearFilter ? `(${yearFilter})` : ''}:
+${topCategories.map(([cat, amount]) => `${cat}: €${amount.toFixed(2)} (${((amount / Object.values(categoryTotals).reduce((a,b) => a+b, 0)) * 100).toFixed(1)}%)`).join('\n')}
+
+SIGNIFICANT YEAR-OVER-YEAR CHANGES IN CATEGORIES:
+${Object.entries(yoyChanges)
+    .filter(([_, data]) => Math.abs(data.change) > 10)
+    .sort((a, b) => Math.abs(b[1].change) - Math.abs(a[1].change))
+    .map(([cat, data]) => `${cat} (${data.years}): ${data.change > 0 ? '+' : ''}${data.change.toFixed(1)}% (€${data.prevAmount.toFixed(0)} → €${data.currentAmount.toFixed(0)})`)
+    .join('\n') || 'No significant changes detected'}
+
+FREQUENCY ANALYSIS - SHOPPING HABITS ${yearFilter ? `(${yearFilter})` : ''}:
+${Object.entries(merchantFrequency)
+    .filter(([_, count]) => count > 3)
+    .sort((a, b) => b[1] - a[1])
+    .map(([merchant, count]) => `${merchant.charAt(0).toUpperCase() + merchant.slice(1)}: ${count} transactions, €${merchantCosts[merchant].toFixed(2)} total (avg €${(merchantCosts[merchant]/count).toFixed(2)} per trip)`)
+    .join('\n') || 'No frequent merchants detected'}
+
+ANALYSIS REQUIREMENTS:
+1. **Areas for Improvement**: Identify 2-3 specific categories where they could reduce spending. ${yearFilter ? `Focus on ${yearFilter} data.` : ''}
+2. **Shopping Habits & Frequency**: If frequent convenience shopping (like Flink >5 times) is detected, calculate potential savings from better meal planning and less frequent grocery trips. Flink is expensive convenience delivery - suggest bulk shopping at discount stores. Calculate specific euro savings.
+3. **YoY Analysis**: ${Object.keys(yoyChanges).length > 0 ? 'Address the significant YoY changes shown above (especially if >30%). Are they justified by inflation or lifestyle changes? What can be done?' : 'Compare spending trends if multiple years available.'}
+4. **Savings Potential**: Estimate realistic monthly savings (in euros) considering frequency patterns and calculate:
+   - Annual savings if invested in S&P 500 ETF (assume 7% average annual return)
+   - Projected value after 10 years with compound growth
+5. **Actionable Recommendations**: Give 3-5 specific, practical steps based on their actual patterns
+
+IMPORTANT GUIDELINES:
+- ${yearFilter ? `Focus ALL insights on ${yearFilter} data specifically` : 'Provide insights across all years'}
+- Be encouraging but honest
+- Use specific numbers from their data
+- Call out concerning patterns (e.g., 37% grocery increase needs explanation, frequent Flink = bad meal planning)
+- Consider they're a couple sharing expenses
+- Focus on sustainable changes, not extreme cuts
+- Mention both partners' contributions positively
+- Use euros (€) for all amounts
+- Be concise but insightful
+
+Format your response with clear sections using markdown headers (###). Make it personal and actionable.`;
+
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 3000,
+                        messages: [{
+                            role: 'user',
+                            content: prompt
+                        }]
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const advice = data.content[0].text;
+
+                // Convert markdown to HTML with proper formatting
+                let html = advice
+                    // Remove initial # headers (we already have a section title)
+                    .replace(/^# .*?\n/gm, '')
+                    // Convert ### headers
+                    .replace(/### (.*?)$/gm, '<h3>$1</h3>')
+                    // Convert ## headers  
+                    .replace(/## (.*?)$/gm, '<h3>$1</h3>')
+                    // Convert bold
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    // Convert line breaks to paragraphs
+                    .split('\n\n')
+                    .map(para => {
+                        // Check if it's a list
+                        if (para.includes('\n- ') || para.includes('\n  - ') || para.includes('\n○ ')) {
+                            const items = para
+                                .split('\n')
+                                .filter(line => line.trim().startsWith('-') || line.trim().startsWith('○'))
+                                .map(line => `<li>${line.replace(/^[\s-○]+/, '').trim()}</li>`)
+                                .join('');
+                            return `<ul>${items}</ul>`;
+                        }
+                        // Check if it's a numbered list
+                        else if (para.match(/^\d+\./m)) {
+                            const items = para
+                                .split('\n')
+                                .filter(line => line.match(/^\d+\./))
+                                .map(line => `<li>${line.replace(/^\d+\.\s*/, '').trim()}</li>`)
+                                .join('');
+                            return `<ol>${items}</ol>`;
+                        }
+                        // Regular paragraph
+                        else if (para.trim() && !para.trim().startsWith('<h3>')) {
+                            return `<p>${para.trim()}</p>`;
+                        }
+                        return para;
+                    })
+                    .join('');
+
+                advisorContent.innerHTML = html;
+
+            } catch (error) {
+                console.error('Financial advice error:', error);
+                advisorContent.innerHTML = `
+                    <div style="color: #ff5252; text-align: center; padding: 20px;">
+                        <p><strong>⚠️ Error generating financial advice</strong></p>
+                        <p style="font-size: 14px; margin-top: 10px;">${error.message}</p>
+                    </div>
+                `;
+            } finally {
+                getAdviceBtn.disabled = false;
+                getAdviceBtn.textContent = '💡 Get Financial Insights';
+            }
+        }
+
+        function updateYoYChart() {
+            const selectedCategory = document.getElementById('yoyCategory').value;
+            const chartContainer = document.getElementById('yoyChart');
+            
+            if (!selectedCategory) {
+                chartContainer.innerHTML = '<p style="color: #999;">Please select a category to compare</p>';
+                return;
+            }
+
+            // Group expenses by year for the selected category
+            const yearlyData = {};
+            expenses.forEach((expense, idx) => {
+                if (removedIndices.has(idx)) return;
+                if (expense.category !== selectedCategory) return;
+                
+                const year = new Date(expense.date).getFullYear();
+                if (!yearlyData[year]) {
+                    yearlyData[year] = 0;
+                }
+                yearlyData[year] += expense.cost;
+            });
+
+            const years = Object.keys(yearlyData).sort();
+            if (years.length === 0) {
+                chartContainer.innerHTML = '<p style="color: #999;">No data available for this category</p>';
+                return;
+            }
+
+            const maxAmount = Math.max(...Object.values(yearlyData));
+            const minAmount = Math.min(...Object.values(yearlyData));
+
+            // Create bars for each year
+            const chartHtml = years.map(year => {
+                const amount = yearlyData[year];
+                const percentage = Math.max((amount / maxAmount) * 100, 20);
+                
+                // Calculate color intensity based on amount
+                const intensity = minAmount === maxAmount ? 1 : 
+                    0.5 + (0.5 * (amount - minAmount) / (maxAmount - minAmount));
+                
+                // Calculate YoY change
+                const prevYear = (parseInt(year) - 1).toString();
+                let changeHtml = '';
+                if (yearlyData[prevYear]) {
+                    const change = ((amount - yearlyData[prevYear]) / yearlyData[prevYear]) * 100;
+                    const arrow = change >= 0 ? '↑' : '↓';
+                    const color = change >= 0 ? '#4caf50' : '#ff5252';
+                    changeHtml = `<span style="margin-left: 10px; color: ${color}; font-size: 12px;">${arrow} ${Math.abs(change).toFixed(1)}%</span>`;
+                }
+                
+                return `
+                    <div class="bar" style="width: ${percentage}%; background: linear-gradient(90deg, 
+                        rgba(102, 126, 234, ${intensity}) 0%, 
+                        rgba(118, 75, 162, ${intensity}) 100%);">
+                        <span class="bar-label">${year}${changeHtml}</span>
+                        <span class="bar-value">${amount.toFixed(2)}</span>
+                    </div>
+                `;
+            }).join('');
+
+            chartContainer.innerHTML = chartHtml;
+        }
+    </script>
+</body>
+</html>
