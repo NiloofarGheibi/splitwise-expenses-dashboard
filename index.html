@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Splitwise Expense Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -682,15 +683,6 @@
                     </select>
                 </div>
                 <div class="control-group">
-                    <label for="groupBy">Group By:</label>
-                    <select id="groupBy">
-                        <option value="month">Month</option>
-                        <option value="quarter">Quarter</option>
-                        <option value="year">Year</option>
-                        <option value="all">All Time</option>
-                    </select>
-                </div>
-                <div class="control-group">
                     <label for="categoryFilter">Filter by Category:</label>
                     <div class="custom-multiselect" id="categoryFilterContainer">
                         <div class="multiselect-header" id="categoryHeader">
@@ -736,6 +728,11 @@
                     </select>
                 </div>
                 <div class="chart-container" id="yoyChart"></div>
+                
+                <div id="monthlyBreakdownSection" style="display: none; margin-top: 40px;">
+                    <h3 style="color: #667eea; margin-bottom: 20px;">📊 Monthly Breakdown Comparison</h3>
+                    <canvas id="monthlyChart" width="800" height="400"></canvas>
+                </div>
             </div>
 
             <div class="section">
@@ -806,14 +803,18 @@
         let selectedCategories = new Set(['all']);
         let suggestedRecategorizations = [];
         let allCategories = [];
+        let monthlyChartInstance = null;
 
         document.getElementById('csvFile').addEventListener('change', handleFileUpload);
-        document.getElementById('groupBy').addEventListener('change', updateDashboard);
         document.getElementById('yearFilter').addEventListener('change', updateDashboard);
         document.getElementById('searchDescription').addEventListener('input', updateDashboard);
         document.getElementById('minAmount').addEventListener('input', updateDashboard);
         document.getElementById('maxAmount').addEventListener('input', updateDashboard);
-        document.getElementById('yoyCategory').addEventListener('change', updateYoYChart);
+        document.getElementById('yoyCategory').addEventListener('change', function() {
+            // Mark as user override so auto-sync doesn't interfere
+            this.dataset.userOverride = 'true';
+            updateYoYChart();
+        });
 
         // Toggle dropdown
         document.getElementById('categoryHeader').addEventListener('click', function(e) {
@@ -948,6 +949,25 @@
             updateTopExpenses(filtered);
             updatePersonPaidExpenses(filtered);
             updatePersonShareExpenses(filtered);
+            
+            // Sync YoY chart with category filter if only one category is selected
+            syncYoYWithCategoryFilter();
+        }
+
+        function syncYoYWithCategoryFilter() {
+            const yoyCategory = document.getElementById('yoyCategory');
+            const currentYoYSelection = yoyCategory.value;
+            
+            // Only auto-sync if user hasn't manually changed YoY category
+            // (we track this by checking if it's the initial selection)
+            if (selectedCategories.size === 1 && !selectedCategories.has('all')) {
+                const singleCategory = Array.from(selectedCategories)[0];
+                // Only update if it's different and not a user override
+                if (yoyCategory.value !== singleCategory && !yoyCategory.dataset.userOverride) {
+                    yoyCategory.value = singleCategory;
+                    updateYoYChart();
+                }
+            }
         }
 
         function updateStats(filtered) {
@@ -1031,16 +1051,14 @@
         }
 
         function updatePersonPaidExpenses(filtered) {
-            const groupBy = document.getElementById('groupBy').value;
             const grouped = {};
 
-            // Calculate who paid what based on the Cost column
-            // We need to determine who paid based on the transaction structure
+            // Calculate who paid what based on the Cost column - group by year
             filtered.forEach(expense => {
-                const key = getGroupKey(expense.date, groupBy);
-                if (!grouped[key]) {
-                    grouped[key] = {};
-                    personNames.forEach(name => grouped[key][name] = 0);
+                const year = new Date(expense.date).getFullYear();
+                if (!grouped[year]) {
+                    grouped[year] = {};
+                    personNames.forEach(name => grouped[year][name] = 0);
                 }
                 
                 // If a person has a positive value in their column, they paid the full cost
@@ -1048,7 +1066,7 @@
                 personNames.forEach(name => {
                     if (expense[name] >= 0) {
                         // This person paid for this expense
-                        grouped[key][name] += expense.cost;
+                        grouped[year][name] += expense.cost;
                     }
                 });
             });
@@ -1085,20 +1103,19 @@
         }
 
         function updatePersonShareExpenses(filtered) {
-            const groupBy = document.getElementById('groupBy').value;
             const grouped = {};
 
-            // Calculate each person's share (their portion of expenses)
+            // Calculate each person's share (their portion of expenses) - group by year
             filtered.forEach(expense => {
-                const key = getGroupKey(expense.date, groupBy);
-                if (!grouped[key]) {
-                    grouped[key] = {};
-                    personNames.forEach(name => grouped[key][name] = 0);
+                const year = new Date(expense.date).getFullYear();
+                if (!grouped[year]) {
+                    grouped[year] = {};
+                    personNames.forEach(name => grouped[year][name] = 0);
                 }
                 
                 // Add each person's share (can be negative if they owe)
                 personNames.forEach(name => {
-                    grouped[key][name] += expense[name];
+                    grouped[year][name] += expense[name];
                 });
             });
 
@@ -1291,6 +1308,12 @@
                 yoyCategory.appendChild(option);
             });
 
+            // Auto-select first category for YoY chart
+            if (allCategories.length > 0) {
+                yoyCategory.value = allCategories[0];
+                updateYoYChart();
+            }
+
             updateCategoryHeaderText();
             
             // Show payments section if there are payments
@@ -1357,6 +1380,7 @@
                     e.category.toLowerCase().includes('plane') ||
                     e.category.toLowerCase().includes('flight') ||
                     e.description.toLowerCase().includes('cash') ||
+                    e.description.toLowerCase().includes('geld') ||
                     e.description.toLowerCase().includes('atm') ||
                     e.description.toLowerCase().includes('bargeld')
                 );
@@ -1843,6 +1867,208 @@ Format your response with clear sections using markdown headers (###). Make it p
             }).join('');
 
             chartContainer.innerHTML = chartHtml;
+
+            // Create monthly breakdown chart
+            createMonthlyBreakdownChart(selectedCategory, years);
+        }
+
+        function createMonthlyBreakdownChart(category, availableYears) {
+            const monthlySection = document.getElementById('monthlyBreakdownSection');
+            
+            // Get year filter from top - THIS IS THE KEY FIX
+            const yearFilterValue = document.getElementById('yearFilter').value;
+            let currentYear, previousYear;
+            
+            if (yearFilterValue !== 'all') {
+                // ALWAYS use the filtered year when set
+                currentYear = parseInt(yearFilterValue);
+                previousYear = currentYear - 1;
+            } else {
+                // Only use availableYears when no filter is set
+                const sortedYears = availableYears.map(y => parseInt(y)).sort((a, b) => b - a);
+                if (sortedYears.length < 2) {
+                    monthlySection.style.display = 'none';
+                    return;
+                }
+                currentYear = sortedYears[0];
+                previousYear = sortedYears[1];
+            }
+
+            // Get search filter
+            const searchDescription = document.getElementById('searchDescription').value.toLowerCase();
+
+            // Check if we have data for both years (in the entire dataset, not just filtered)
+            const hasCurrentYear = expenses.some(e => 
+                !removedIndices.has(expenses.indexOf(e)) &&
+                e.category === category &&
+                new Date(e.date).getFullYear() === currentYear &&
+                (!searchDescription || e.description.toLowerCase().includes(searchDescription))
+            );
+            const hasPreviousYear = expenses.some(e => 
+                !removedIndices.has(expenses.indexOf(e)) &&
+                e.category === category &&
+                new Date(e.date).getFullYear() === previousYear &&
+                (!searchDescription || e.description.toLowerCase().includes(searchDescription))
+            );
+
+            if (!hasCurrentYear && !hasPreviousYear) {
+                monthlySection.style.display = 'none';
+                return;
+            }
+
+            // Calculate monthly data for both years
+            const monthlyData = {
+                [currentYear]: Array(12).fill(0),
+                [previousYear]: Array(12).fill(0)
+            };
+
+            expenses.forEach((expense, idx) => {
+                if (removedIndices.has(idx)) return;
+                if (expense.category !== category) return;
+                
+                // Apply description filter
+                if (searchDescription && !expense.description.toLowerCase().includes(searchDescription)) return;
+                
+                const date = new Date(expense.date);
+                const year = date.getFullYear();
+                const month = date.getMonth(); // 0-11
+                
+                if (year === currentYear || year === previousYear) {
+                    monthlyData[year][month] += expense.cost;
+                }
+            });
+
+            // Show section
+            monthlySection.style.display = 'block';
+
+            // Destroy existing chart if it exists
+            if (monthlyChartInstance) {
+                monthlyChartInstance.destroy();
+            }
+
+            // Create chart title showing which years are being compared
+            const chartTitle = yearFilterValue !== 'all' 
+                ? `Comparing ${currentYear} vs ${previousYear}` 
+                : `Latest Years: ${currentYear} vs ${previousYear}`;
+
+            // Create new chart
+            const ctx = document.getElementById('monthlyChart').getContext('2d');
+            monthlyChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [
+                        {
+                            label: `${currentYear}`,
+                            data: monthlyData[currentYear],
+                            borderColor: 'rgb(102, 126, 234)',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: 'rgb(102, 126, 234)',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
+                        },
+                        {
+                            label: `${previousYear}`,
+                            data: monthlyData[previousYear],
+                            borderColor: 'rgb(255, 159, 64)',
+                            backgroundColor: 'rgba(255, 159, 64, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 5,
+                            pointHoverRadius: 7,
+                            pointBackgroundColor: 'rgb(255, 159, 64)',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: chartTitle,
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            },
+                            padding: {
+                                bottom: 20
+                            },
+                            color: '#667eea'
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': €' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '€' + value.toFixed(0);
+                                },
+                                font: {
+                                    size: 12
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
         }
     </script>
 </body>
