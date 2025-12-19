@@ -1401,7 +1401,8 @@ Respond ONLY with a JSON array. No explanations, no markdown:
                     headers: {
                         'Content-Type': 'application/json',
                         'x-api-key': apiKey,
-                        'anthropic-version': '2023-06-01'
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true'
                     },
                     body: JSON.stringify({
                         model: 'claude-sonnet-4-20250514',
@@ -1701,7 +1702,8 @@ Format your response with clear sections using markdown headers (###). Make it p
                     headers: {
                         'Content-Type': 'application/json',
                         'x-api-key': apiKey,
-                        'anthropic-version': '2023-06-01'
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true'
                     },
                     body: JSON.stringify({
                         model: 'claude-sonnet-4-20250514',
