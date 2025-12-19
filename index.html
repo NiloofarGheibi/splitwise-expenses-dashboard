@@ -1365,32 +1365,39 @@
 EXISTING CATEGORIES IN THE DATA:
 ${existingCategories.join(', ')}
 
-CATEGORIZATION RULES:
-1. **Cash Withdrawals & ATM** (cash, geldautomat, ATM, withdrawal) → "Cash" (create if doesn't exist, NOT TV/Phone/Internet or General)
-2. **Streaming Services** (Netflix, Disney+, Spotify, etc.) → "TV/Phone/Internet"
-3. **Home Decor & Furnishings** (candles, decorations, furniture, Räucherkerze) → "Furniture" or "Home" (if it exists)
-4. **Credit Card Refunds/Payments** (Amex, Visa refunds) → "Cash"
-5. **Tourist Attractions & Experiences** (Kehlsteinhaus, museums, sauna, spa) → "Tickets" or "Entertainment"
-6. **Co-Working Spaces & Office Rentals** → "Services" or "Office" (not Household Supplies)
-7. **Groceries & Supermarkets** (Rewe, Edeka, Aldi, Lidl, Flink) → "Groceries" or "Food and drink"
-8. **Restaurants & Cafes** → "Food and drink" or "Dining"
-9. **Transportation** (Uber, taxi, gas) → "Transportation" or "Travel"
-10. **Utilities** (electricity, water, internet bills) → "Utilities" or "Bills"
+CRITICAL CATEGORIZATION RULES (FOLLOW EXACTLY):
 
-IMPORTANT GUIDELINES:
-- Cash/ATM = "Cash" category ALWAYS (never TV/Phone/Internet or General)
-- Be specific: Don't use "General" unless truly unclear
+**RULE #1 - CASH (HIGHEST PRIORITY):**
+ANY mention of: "cash", "geld", "atm", "geldautomat", "withdrawal", "abhebung", "bargeld"
+→ ALWAYS categorize as "Cash" or "General"
+→ NEVER use "TV/Phone/Internet" for cash withdrawals
+→ If "Cash" category doesn't exist in the data, use "General"
+
+**OTHER RULES:**
+1. **Streaming Services** (Netflix, Disney+, Spotify, Apple Music) → "TV/Phone/Internet"
+2. **Home Decor & Furnishings** (candles, decorations, furniture, Räucherkerze) → "Furniture" or "Home"
+3. **Credit Card Refunds/Payments** (Amex, Visa refunds) → "Cash" or "General"
+4. **Tourist Attractions** (Kehlsteinhaus, museums, sauna, spa) → "Tickets" or "Entertainment"
+5. **Co-Working Spaces** → "Services" or "Office" (NOT Household Supplies)
+6. **Groceries** (Rewe, Edeka, Aldi, Lidl, Flink) → "Groceries"
+7. **Restaurants & Cafes** → "Dining" or "Food and drink"
+8. **Transportation** (Uber, taxi, gas) → "Transportation"
+9. **Utilities** (electricity, water, internet bills) → "Utilities" or "Bills"
+
+EXAMPLES - CASH:
+- "Cash withdrawal" → "Cash" or "General" (NEVER "TV/Phone/Internet")
+- "ATM Geldautomat" → "Cash" or "General"
+- "Bargeld abheben" → "Cash" or "General"
+
+GUIDELINES:
+- Be specific: Don't use "General" UNLESS it's truly unclear OR it's cash-related
 - Match existing categories when possible
-- Create new specific categories only when necessary (e.g., "Cash", "Services", "Office")
-- Consider the context: Sauna at a spa = Entertainment/Tickets, not Health
-- Streaming = TV/Phone/Internet (even if it's entertainment)
-- Home items (decorations, candles, furnishings) = Furniture/Home, NOT Movies
-- Co-working spaces = Services/Office, NOT Household Supplies
+- TV/Phone/Internet is ONLY for: streaming, phone bills, internet bills (NOT cash!)
 
 EXPENSES TO RECATEGORIZE:
 ${otherExpenses.map((e, idx) => `${idx}. "${e.description}" | Current: "${e.category}" | Cost: ${e.cost}`).join('\n')}
 
-Respond ONLY with a JSON array. No explanations, no markdown:
+Respond ONLY with a JSON array:
 [
   {"index": 0, "newCategory": "Category Name"},
   {"index": 1, "newCategory": "Category Name"}
