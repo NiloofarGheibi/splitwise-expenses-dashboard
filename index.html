@@ -269,6 +269,9 @@
             padding: 15px;
             text-align: left;
             font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         td {
@@ -647,12 +650,13 @@
             <div class="api-key-section">
                 <h3>🔑 Claude AI API Key (Optional)</h3>
                 <p style="color: #856404; font-size: 14px;">
-                    We detected expenses with "Other" categories. Enter your Claude API key to improve categorization automatically. 
+                    We detected expenses that can be better categorized. The system will apply smart categorization rules automatically. 
+                    You can also enter your Claude API key for AI-powered financial insights.
                     Get one from <a href="https://console.anthropic.com/" target="_blank">Anthropic Console</a>.
                 </p>
-                <input type="password" id="apiKey" placeholder="sk-ant-...">
+                <input type="password" id="apiKey" placeholder="sk-ant-... (optional for recategorization)">
                 <div style="margin-top: 15px; display: flex; gap: 10px;">
-                    <button class="modal-btn modal-btn-primary" onclick="proceedWithRecategorization()">Recategorize with AI</button>
+                    <button class="modal-btn modal-btn-primary" onclick="proceedWithRecategorization()">Apply Smart Rules</button>
                     <button class="modal-btn modal-btn-secondary" onclick="skipRecategorization()">Skip & Continue</button>
                 </div>
             </div>
@@ -660,7 +664,7 @@
 
         <div id="recategorizationModal" class="modal-overlay hidden">
             <div class="modal">
-                <h2>🤖 AI Category Suggestions</h2>
+                <h2>✨ Smart Categorization Suggestions</h2>
                 <div id="modalContent" class="modal-content"></div>
                 <div class="modal-buttons">
                     <button class="modal-btn modal-btn-secondary" onclick="rejectRecategorization()">Keep Original</button>
@@ -767,17 +771,19 @@
             <div class="section" id="paymentsSection" style="display: none;">
                 <h2>💸 Payment Transfers Between Partners</h2>
                 <p style="color: #666; margin-bottom: 15px;">These are internal transfers between partners, not expenses</p>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Description</th>
-                            <th>Amount</th>
-                            <th>Currency</th>
-                        </tr>
-                    </thead>
-                    <tbody id="paymentsTable"></tbody>
-                </table>
+                <div style="max-height: 400px; overflow-y: auto; margin-bottom: 15px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Currency</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentsTable"></tbody>
+                    </table>
+                </div>
                 <div id="paymentsTotal" style="margin-top: 20px; padding: 15px; background: #e3f2fd; border-radius: 10px;"></div>
             </div>
 
@@ -1331,123 +1337,113 @@
         }
 
         async function recategorizeExpenses(apiKey) {
-            const modalContent = document.getElementById('modalContent');
             const modal = document.getElementById('recategorizationModal');
+            const modalContent = document.getElementById('modalContent');
             
+            // Show processing message
+            modalContent.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>Applying categorization rules...</p>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+
             try {
-                // Get expenses with "Other" in category
-                const otherExpenses = expenses.filter(e => 
-                    e.category.toLowerCase().includes('other')
+                // Get expenses with "Other" in category OR that need recategorization
+                const expensesToRecategorize = expenses.filter(e => 
+                    e.category.toLowerCase().includes('other') ||
+                    e.category.toLowerCase().includes('hotel') ||
+                    e.category.toLowerCase().includes('plane') ||
+                    e.category.toLowerCase().includes('flight') ||
+                    e.description.toLowerCase().includes('cash') ||
+                    e.description.toLowerCase().includes('geld') ||
+                    e.description.toLowerCase().includes('atm') ||
+                    e.description.toLowerCase().includes('bargeld')
                 );
 
-                if (otherExpenses.length === 0) {
+                if (expensesToRecategorize.length === 0) {
+                    modal.classList.add('hidden');
                     initializeDashboard();
                     return;
                 }
 
-                // Show loading spinner ONLY after we know we need to process
-                modalContent.innerHTML = `
-                    <div class="loading-spinner">
-                        <div class="spinner"></div>
-                        <p>AI is analyzing your expenses...</p>
-                    </div>
-                `;
-                modal.classList.remove('hidden');
+                // Apply static categorization rules
+                suggestedRecategorizations = [];
+                
+                expensesToRecategorize.forEach(expense => {
+                    let newCategory = expense.category;
+                    let reason = '';
 
-                // Get existing non-"Other" categories for context
-                const existingCategories = allCategories.filter(cat => 
-                    !cat.toLowerCase().includes('other')
-                );
+                    // Rule 1: Hotel/Plane/Flight → Travel
+                    if (expense.category.toLowerCase().includes('hotel') || 
+                        expense.category.toLowerCase().includes('plane') ||
+                        expense.category.toLowerCase().includes('flight')) {
+                        newCategory = 'Travel';
+                        reason = 'Hotel/Plane → Travel';
+                    }
+                    // Rule 2: Cash in description → Cash
+                    else if (expense.description.toLowerCase().includes('cash') ||
+                             expense.description.toLowerCase().includes('geld') ||
+                             expense.description.toLowerCase().includes('atm') ||
+                             expense.description.toLowerCase().includes('bargeld') ||
+                             expense.description.toLowerCase().includes('withdrawal') ||
+                             expense.description.toLowerCase().includes('abhebung')) {
+                        newCategory = 'Cash';
+                        reason = 'Cash/ATM in description → Cash';
+                    }
+                    // Rule 3: Streaming services → TV/Phone/Internet
+                    else if (expense.description.toLowerCase().includes('netflix') ||
+                             expense.description.toLowerCase().includes('spotify') ||
+                             expense.description.toLowerCase().includes('disney') ||
+                             expense.description.toLowerCase().includes('apple music') ||
+                             expense.description.toLowerCase().includes('youtube premium')) {
+                        newCategory = 'TV/Phone/Internet';
+                        reason = 'Streaming service → TV/Phone/Internet';
+                    }
+                    // Rule 4: Flink/Grocery stores → Groceries
+                    else if (expense.description.toLowerCase().includes('flink') ||
+                             expense.description.toLowerCase().includes('rewe') ||
+                             expense.description.toLowerCase().includes('edeka') ||
+                             expense.description.toLowerCase().includes('aldi') ||
+                             expense.description.toLowerCase().includes('lidl')) {
+                        newCategory = 'Groceries';
+                        reason = 'Grocery store → Groceries';
+                    }
+                    // Rule 5: Restaurants/Food delivery → Dining
+                    else if (expense.description.toLowerCase().includes('restaurant') ||
+                             expense.description.toLowerCase().includes('lieferando') ||
+                             expense.description.toLowerCase().includes('wolt') ||
+                             expense.description.toLowerCase().includes('uber eats')) {
+                        newCategory = 'Dining';
+                        reason = 'Restaurant/Delivery → Dining';
+                    }
+                    // Rule 6: Transportation → Transportation
+                    else if (expense.description.toLowerCase().includes('uber') ||
+                             expense.description.toLowerCase().includes('taxi') ||
+                             expense.description.toLowerCase().includes('bolt')) {
+                        newCategory = 'Transportation';
+                        reason = 'Taxi/Uber → Transportation';
+                    }
+                    // Rule 7: Everything else with "Other" → General
+                    else if (expense.category.toLowerCase().includes('other')) {
+                        newCategory = 'General';
+                        reason = 'Other → General';
+                    }
 
-                // Prepare the prompt for Claude
-                const prompt = `You are an expert expense categorization assistant. Analyze these expense descriptions and assign them to the most appropriate categories.
-
-EXISTING CATEGORIES IN THE DATA:
-${existingCategories.join(', ')}
-
-CRITICAL CATEGORIZATION RULES (FOLLOW EXACTLY):
-
-**RULE #1 - CASH (HIGHEST PRIORITY):**
-ANY mention of: "cash", "geld", "atm", "geldautomat", "withdrawal", "abhebung", "bargeld"
-→ ALWAYS categorize as "Cash" or "General"
-→ NEVER use "TV/Phone/Internet" for cash withdrawals
-→ If "Cash" category doesn't exist in the data, use "General"
-
-**OTHER RULES:**
-1. **Streaming Services** (Netflix, Disney+, Spotify, Apple Music) → "TV/Phone/Internet"
-2. **Home Decor & Furnishings** (candles, decorations, furniture, Räucherkerze) → "Furniture" or "Home"
-3. **Credit Card Refunds/Payments** (Amex, Visa refunds) → "Cash" or "General"
-4. **Tourist Attractions** (Kehlsteinhaus, museums, sauna, spa) → "Tickets" or "Entertainment"
-5. **Co-Working Spaces** → "Services" or "Office" (NOT Household Supplies)
-6. **Groceries** (Rewe, Edeka, Aldi, Lidl, Flink) → "Groceries"
-7. **Restaurants & Cafes** → "Dining" or "Food and drink"
-8. **Transportation** (Uber, taxi, gas) → "Transportation"
-9. **Utilities** (electricity, water, internet bills) → "Utilities" or "Bills"
-
-EXAMPLES - CASH:
-- "Cash withdrawal" → "Cash" or "General" (NEVER "TV/Phone/Internet")
-- "ATM Geldautomat" → "Cash" or "General"
-- "Bargeld abheben" → "Cash" or "General"
-
-GUIDELINES:
-- Be specific: Don't use "General" UNLESS it's truly unclear OR it's cash-related
-- Match existing categories when possible
-- TV/Phone/Internet is ONLY for: streaming, phone bills, internet bills (NOT cash!)
-
-EXPENSES TO RECATEGORIZE:
-${otherExpenses.map((e, idx) => `${idx}. "${e.description}" | Current: "${e.category}" | Cost: ${e.cost}`).join('\n')}
-
-Respond ONLY with a JSON array:
-[
-  {"index": 0, "newCategory": "Category Name"},
-  {"index": 1, "newCategory": "Category Name"}
-]`;
-
-                const response = await fetch('https://api.anthropic.com/v1/messages', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-api-key': apiKey,
-                        'anthropic-version': '2023-06-01',
-                        'anthropic-dangerous-direct-browser-access': 'true'
-                    },
-                    body: JSON.stringify({
-                        model: 'claude-sonnet-4-20250514',
-                        max_tokens: 2000,
-                        messages: [{
-                            role: 'user',
-                            content: prompt
-                        }]
-                    })
+                    // Only add if category actually changed
+                    if (newCategory !== expense.category) {
+                        suggestedRecategorizations.push({
+                            expense: expense,
+                            oldCategory: expense.category,
+                            newCategory: newCategory,
+                            reason: reason
+                        });
+                    }
                 });
 
-                if (!response.ok) {
-                    throw new Error(`API Error: ${response.status}`);
-                }
-
-                const data = await response.json();
-                const textContent = data.content[0].text;
-                
-                // Parse the JSON response
-                const jsonMatch = textContent.match(/\[[\s\S]*\]/);
-                if (!jsonMatch) {
-                    throw new Error('Invalid response format from API');
-                }
-                
-                const suggestions = JSON.parse(jsonMatch[0]);
-
-                // Create recategorization suggestions
-                suggestedRecategorizations = otherExpenses.map((expense, idx) => {
-                    const suggestion = suggestions.find(s => s.index === idx);
-                    return {
-                        expense: expense,
-                        oldCategory: expense.category,
-                        newCategory: suggestion ? suggestion.newCategory : expense.category
-                    };
-                }).filter(s => s.oldCategory !== s.newCategory);
-
                 if (suggestedRecategorizations.length === 0) {
-                    // No changes suggested - hide modal and proceed
+                    // No changes needed
                     modal.classList.add('hidden');
                     initializeDashboard();
                     return;
@@ -1477,8 +1473,10 @@ Respond ONLY with a JSON array:
             const modalContent = document.getElementById('modalContent');
             
             const affectedCount = suggestedRecategorizations.length;
-            const totalOtherCount = expenses.filter(e => 
-                e.category.toLowerCase().includes('other')
+            const totalCount = expenses.filter(e => 
+                e.category.toLowerCase().includes('other') ||
+                e.category.toLowerCase().includes('hotel') ||
+                e.category.toLowerCase().includes('plane')
             ).length;
             
             const summary = `
@@ -1487,7 +1485,7 @@ Respond ONLY with a JSON array:
                         ${affectedCount} ${affectedCount === 1 ? 'expense' : 'expenses'} to be updated
                     </div>
                     <div style="color: #666; font-size: 14px;">
-                        Out of ${totalOtherCount} expenses with "Other" categories
+                        Based on static categorization rules
                     </div>
                 </div>
             `;
@@ -1500,6 +1498,7 @@ Respond ONLY with a JSON array:
                         →
                         <span class="new-category">${item.newCategory}</span>
                     </div>
+                    <div style="font-size: 12px; color: #999; margin-top: 5px;">${item.reason}</div>
                 </div>
             `).join('');
 
